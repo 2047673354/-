@@ -1,0 +1,48 @@
+name: Extract PDFs to text
+
+on:
+  push:
+    paths:
+      - "**/*.pdf"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  pdf2text:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Install poppler-utils
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+
+      - name: Convert PDFs to TXT (layout preserved)
+        shell: bash
+        run: |
+          mkdir -p docs/pdf_text
+          shopt -s globstar nullglob
+          for f in **/*.pdf; do
+            base="$(basename "$f" .pdf)"
+            echo "Converting: $f -> docs/pdf_text/${base}.txt"
+            pdftotext -layout "$f" "docs/pdf_text/${base}.txt" || true
+          done
+
+      - name: Commit and push changes
+        shell: bash
+        run: |
+          if [ -n "$(git status --porcelain docs/pdf_text)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add docs/pdf_text
+            git commit -m "chore: extract PDFs to text"
+            git push
+          else
+            echo "No changes to commit."
+          fi
