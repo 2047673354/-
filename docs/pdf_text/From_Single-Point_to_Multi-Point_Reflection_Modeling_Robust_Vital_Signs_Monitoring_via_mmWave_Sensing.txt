@@ -1,0 +1,1081 @@
+IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 23, NO. 12, DECEMBER 2024                                                                                      14959
+
+
+
+
+              From Single-Point to Multi-Point Reflection
+               Modeling: Robust Vital Signs Monitoring
+                        via mmWave Sensing
+                      Duo Zhang , Xusheng Zhang , Yaxiong Xie , Fusang Zhang , Hongliu Yang ,
+                                          and Daqing Zhang , Fellow, IEEE
+
+
+   Abstract—Long-term monitoring of human vital signs like res-                    diverse diseases [1], [2] and monitoring overall health condi-
+piration and heartbeat is crucial for the early detection of diverse               tions [3]. For example, according to the latest report from the
+diseases and overall health monitoring. Contact-free vital signs                   American Heart Association (AHA), we have seen 928,741 lives
+monitoring using wireless signals, particularly mmWave-based
+methods, has gained attention due to its sensitivity and privacy-                  lost in the US solely due to cardiovascular disorders in 2020 [4].
+preserving benefits. However, we observe that even minor human                     We could prevent those tragedies from happening if we could
+movements could lead to significant mutations in the signal-to-noise               provide robust and accurate continuous heart rate and Heart Rate
+ratio (SNR) of the wireless signal, which cannot be explained by                   Variability (HRV) monitoring at home, since rapid or irregular
+the commonly used model that represents the human chest as a                       heartbeat is a very critical early symptom of cardiovascular
+single reflection point. These fluctuations challenge the robustness
+of heart rate and heart rate variability (HRV) monitoring due to                   disorders.
+the vulnerability of faint heartbeats to noise interference. To tackle                Presently, vital sign tracking methods fall into two categories:
+this, we introduce a multi-point reflection model to understand the                contact-based and contact-free. Contact-based techniques, in-
+underlying causes of SNR fluctuations and propose a frequency                      cluding devices like multi-parameter monitors [5], and smart
+diversity based algorithm to enhance sensing SNR. Our solution,                    watches [6], necessitate direct bodily contact for proper op-
+Robust-Vital, was rigorously evaluated using commercial mmWave
+radar systems and demonstrated superior performance on long-                       eration, often leading to user discomfort. Additionally, these
+term heart rate and heart rate variability tracking in a user study                devices are ill-suited for long-term patient monitoring due to
+with 12 participants.                                                              factors like frequent charging requirements. Among contact-free
+  Index Terms—MmWave radar, multi-reflection                           model,
+                                                                                   methods, computer vision based approaches [7] raises severe pri-
+robustness, vital signs, wireless sensing.                                         vacy concerns, notably in bedrooms where privacy is paramount.
+                                                                                   Radio Frequency (RF) based contact-free vital signs tracking
+                                                                                   methods have gained increasing attention due to its privacy-
+                            I. INTRODUCTION                                        preserving nature and sensitivity to subtle movements. These
+       ONTINUOUSLY and daily tracking of vital signs like                          systems utilize wireless signals, such as WiFi [1], UWB [8], and
+C      respiration and heartbeat is critical for early detection of                mmWave signal [9], that reflects off the human body to sense
+                                                                                   minor vibrations induced by breath and the heartbeat within the
+                                                                                   chest cavity.
+   Received 23 January 2024; revised 21 June 2024; accepted 20 August 2024.
+Date of publication 26 August 2024; date of current version 5 November                In the field of RF-based techniques, human vital sign monitor-
+2024. This work was supported by NSFC A3 Foresight Program under Grant             ing systems utilizing mmWave signals have garnered significant
+62061146001. Recommended for acceptance by M. Pierobon. (Corresponding             interest. This heightened attention can be chiefly attributed to the
+author: Daqing Zhang.)
+   This work involved human subjects or animals in its research. Approval of all   exceptional sensitivity afforded by mmWave’s high frequency
+ethical and experimental procedures and protocols was granted by Committee of      and its capacity to offer precise sensing capabilities in terms of
+Peking University First Hospital under Application No. 2021297, and performed      both distance and angle dimensions, thanks to its wide GHz-
+in line with the Declaration of Helsinki.
+   Duo Zhang, Xusheng Zhang, and Hongliu Yang are with the Key Lab of High         wide bandwidth. Moreover, the well-established commercial
+Confidence Software Technologies (Ministry of Education), School of Computer       viability of mmWave technology plays a pivotal role in this
+Science, Peking University, Beijing 100871, China (e-mail: zhangduo@stu.           increased focus. Presently, numerous prominent semiconductor
+pku.edu.cn; zhangxusheng@stu.pku.edu.cn; Hongliu_yang@stu.pku.edu.cn).
+   Yaxiong Xie is with the University at Buffalo, Buffalo, NY 14203 USA            manufacturers, such as TI [10], Infineon [11], Calterah [12], and
+(e-mail: yaxiongx@buffalo.edu).                                                    others, have introduced radar chips that are readily available
+   Fusang Zhang is with the Institute of Software, Chinese Academy of Sciences,    in the commercial market. Consequently, a diverse range of
+University of Chinese Academy of Sciences, Beijing 100190, China (e-mail:
+fusang@iscas.ac.cn).                                                               mmWave-based vital sign monitoring systems has showcased
+   Daqing Zhang is with the Key Lab of High Confidence Software Technologies       remarkable accuracy in controlled laboratory settings using
+(Ministry of Education), School of Computer Science, Peking University, Bei-       commercial mmWave radar [13].
+jing 100871, China, and also with the Telecom SudParis, Institut Polytechnique
+de Paris, 91011 Evry Cedex, France (e-mail: dqzhang@sei.pku.edu.cn).                  Despite its success in controlled laboratory environments, the
+   Digital Object Identifier 10.1109/TMC.2024.3450318                              current mmWave-based vital sign monitoring system, especially
+
+
+                         1536-1233 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                       See https://www.ieee.org/publications/rights/index.html for more information.
+
+
+      Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on September 11,2025 at 08:23:49 UTC from IEEE Xplore. Restrictions apply.
+14960                                                                               IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 23, NO. 12, DECEMBER 2024
+
+
+
+                                                                                      interplay oscillates between reinforcement and cancellation as
+                                                                                      body posture changes, giving rise to the phenomenon of SNR
+                                                                                      mutations. In practical applications, the human thorax involves
+                                                                                      multiple reflection points, further amplifying the intricacies of
+                                                                                      this phenomenon.
+                                                                                         The phenomenon of SNR mutation poses a significant ob-
+                                                                                      stacle to the widespread adoption of mmWave-based heartbeat
+                                                                                      monitoring systems. In controlled laboratory settings, we can
+                                                                                      manipulate and maintain the human’s posture to achieve the
+                                                                                      desired level of accuracy. However, in real-world deployments,
+Fig. 1. In low SNR scenarios, noise can obscure the heartbeat signal. Interest-
+ingly, these two sets of data are gathered sequentially with a minor body posture
+                                                                                      the system must exhibit robust performance regardless of the
+adjustment. We term this occurrence the “SNR mutation” phenomenon.                    individual’s position and posture. This becomes particularly
+                                                                                      crucial in scenarios of long-term monitoring of vital signs during
+                                                                                      human sleep, as people’s sleeping postures unconsciously and
+                                                                                      continuously change.
+                                                                                         In this paper, we propose to leverage frequency diversity to
+                                                                                      mitigate the impact of SNR mutation. Our fundamental insight
+                                                                                      lies in the fact that while signal reflections from the human
+                                                                                      thorax may undergo deconstructive superimposition, leading to
+                                                                                      cancellation at one frequency, say f1 , they may concurrently
+                                                                                      experience constructive superimposition and reinforcement at
+                                                                                      another frequency, denoted as f2 . The superimposition of two
+                                                                                      signals becomes independent from each other only when their
+Fig. 2. Intuitive understanding of multi-point reflections. These two signals
+cancel each other, causing a low SNR.
+                                                                                      frequencies have a large enough gap, denoted as the coherent
+                                                                                      bandwidth fd = |f1 − f2 |. In this context, we have conducted
+                                                                                      theoretical derivations to establish fd for mmWave-based human
+heartbeat monitoring, encounters a significant challenge when                         vital sign monitoring.
+deployed in practical real-world settings: the SNR mutation.                             Based on our insights and theoretical results, we have de-
+We refer to the example in Fig. 1 to demonstrate the concept                          veloped a frequency-diversity harnessing algorithm aimed at
+of SNR mutation. In this example, we use mmWave radar to                              mitigating SNR mutation. Initially, we introduce a Vital-index
+monitor a person’s respiration and heartbeat at two locations                         metric to evaluate the quality of the received sensing signal at dif-
+separated by just 5 centimeters, and plot the obtained sensing                        ferent frequencies, specifically focusing on sensing SNR. Sub-
+signal in Fig. 1(a) and (b). From Fig. 1(a), we can observe                           sequently, we transmit the mmWave signal across multiple fre-
+that while the primary variation in the signal is attributed to                       quency bands, each separated by at least the coherent bandwidth
+respiration, the signal fluctuations caused by the heartbeat are                      fd , with the goal of identifying frequencies characterized by
+still clearly discernible, indicating a high SNR in the sensing                       constructive signal superimposition and consequently exhibiting
+signal. Conversely, in Fig. 1(b), noise overwhelms the heartbeat                      higher sensing SNR. Finally, we present a signal combining
+signal, indicating a low SNR in the sensing signal. We refer to                       algorithm designed to optimize sensing SNR by merging signals
+this phenomenon, where the SNR of the sensing signal varies                           received from frequencies with robust sensing SNR. Leveraging
+significantly with minor motions (e.g. moving 5 centimeters) of                       this improved signal, we can accurately monitor human vital
+the object of interest, as SNR mutation.                                              signs, such as respiration and heartbeat, even in the presence of
+   SNR mutation arises due to the intricate nature of the human                       frequent human motions.
+thorax as a signal reflector, reflecting multiple signals rather than                    In this paper, we design and implement Robust-Vital, a ro-
+the single reflection point assumed in most existing wireless-                        bust long-term vital signs monitoring system using commer-
+based human vital sign monitoring systems [1], [13], [14], [15].                      cial mmWave radars. We recruited 12 volunteers for a com-
+The amalgamation of these signal reflections from the human                           prehensive evaluation of Robust-Vital’s performance in long-
+thorax results in intricate signal superimposition. To illustrate                     term heart rate and heart rate variability tracking. The dataset
+this, we can examine the interplay of two signal reflections.                         encompasses over 180 hours of continuous monitoring dur-
+As depicted in Fig. 2, a mere quarter-wavelength difference                           ing the volunteers’ full-night sleep. We used the Interbeat In-
+in their travel distances, equivalent to a mere 1.25 mm for the                       terval (IBI) as the heart rate variability index. Robust-Vital
+5 mm wavelength of a 60 GHz mmWave signal, leads to the two                           achieves a median error of 0.36 bpm in heart rate estimation
+signals being out of phase and cancelling each other. Conversely,                     and 5.88ms in IBI estimation, significantly outperforming state-
+when two signal reflections travel identical distances before                         of-the-art method [16] with errors of 2.27 bpm and 33.61 ms,
+reaching the radar, they reinforce each other upon superposition                      respectively.
+due to their in-phase nature. This means that even minor body                            The main contributions of our work are summarized as fol-
+movements can induce significant phase differences between                            lows.
+these two reflection point signals, resulting in notable SNR vari-                        r For RF-based vital signs tracking, we have, for the first
+ations in the received sensing signal. Consequently, this dynamic                           time, developed a multi-point human thorax reflection
+    Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on September 11,2025 at 08:23:49 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: FROM SINGLE-POINT TO MULTI-POINT REFLECTION MODELING: ROBUST VITAL SIGNS MONITORING VIA mmWAVE SENSING                                      14961
+
+
+
+
+Fig. 3. (a)–(b): Comparison of the spectra of signals with high and low signal-to-noise ratios (SNRs). In the spectrum, frr represents respiration rate, and fhr
+represents heart rate. (c): In empirical experiments, we observe that small changes in the location of the human body cause large SNR fluctuations.
+
+
+     model to explain factors influencing system robustness and                  a 5 mm wavelength. Heartbeat, however, causes tiny phase shifts
+     the SNR mutation phenomenon.                                                that are sensitive to noise interference, especially in low SNR
+   r We theoretically derive how minor body posture adjust-                      conditions, as seen in Fig. 1.
+     ments and wireless signal carrier frequency changes influ-                     Upon acquiring the phase changes, a direct approach for
+     ence the sensing SNR within the context of the multi-point                  calculating respiratory and heart rates involves filtering signals
+     reflection model.                                                           by certain frequency bands (0.1 to 0.5Hz for breath, 0.8 to
+   r We propose a novel signal processing scheme that lever-                     2Hz for heartbeat). Next, strong energy peaks that correlate to
+     ages frequency diversity to improve SNR based on the                        respiratory and heart rates are seen within their respective fre-
+     multi-point reflection model. Our method selects and com-                   quency spectra. [14], [18]. To reliably determine the heart rate,
+     bines multiple carrier frequencies with superior signal                     however, a number of respiratory harmonics within the heart
+     quality, effectively enhancing the robustness of the sensing                rate spectrum, such as the third harmonic in Fig. 3(b), provide
+     system.                                                                     a considerable challenge. Note that the spectrum in Fig. 3(a)
+   r We implement Robust-Vital and evaluate its performance                      and (b) enhances high-frequency components (associated with
+     through long-term heart rate and HRV tracking. A user                       heartbeat harmonics) by second-order phase differentiation.
+     study with 12 volunteers demonstrates robust performance                       Fortunately, the energy of respiratory harmonics decreases
+     over the state-of-the-art solutions.                                        with increasing order, becoming normally less significant af-
+                                                                                 ter the fourth harmonic. In addition, heartbeat signals contain
+                           II. PRELIMILARIES                                     higher-order harmonics, which are rarely influenced by res-
+                                                                                 piratory harmonics due to their higher frequency, shown in
+   In this section, we first introduce the basics of mmWave                      Fig. 3(b). It is straightforward to identify the peaks that correlate
+radar vital sign estimation. Then, we describe the multi-point                   to respiration and heartbeat, as well as their harmonics. Fig. 3(a)
+reflections effect and its impact on the resilience of the sensing               illustrates how noise could easily submerge heartbeat-related
+system.                                                                          peaks in conditions with lower SNR. As a result, many tech-
+                                                                                 niques for calculating heart rate and heart rate variability rely on
+A. Estimating Vital Signs Via Mmwave Radar                                       higher-order heart harmonics [19], [20], [21], [22].
+   The underlying concept for estimating vital signs using wire-
+less technologies is to detect the subtle chest movement induced                 B. Effect of Multi-Point Reflections on Sensing
+by respiration and heartbeat. The wireless signal phase associ-
+ated with the reflection point exhibits a linear change along with                  Considering the subtle nature of heartbeats, they can be
+the chest displacement in the widely used single-point reflection                readily obscured by noise in the radar’s received signal. SNR
+model:                                                                           thus becomes a critical factor for monitoring heartbeats. SNR
+                                                                                 in this case refers to the signal-to-noise-ratio (SNR) of the
+                                4πf Δd   4πΔd
+                       Δϕ =            =                                  (1)    chest-reflected signal received by the radar. SNR is directly
+                                  c        λ                                     proportional to the received signal strength under the assumption
+where f stands for the carrier frequency, c denotes the speed of                 that the noise level is constant. If R denotes the chest-radar
+light, and λ represents the wavelength. The phase shift Δϕ is an                 distance and λ denotes the wavelength of the transmitted radar
+accurate measure of the change in signal propagation distance,                   signal, under the traditional single-point reflection assumption,
+Δd is the displacement of chest movement.                                        the following formula is used to calculate the received signal
+   Adults often experience 4 to 12 mm of chest motion from                       power [23]:
+breathing, whereas heartbeat-induced motion is merely around
+0.5 mm [17]. Respiration causes significant phase variations that                                                     Pt G2 λ2 σ
+                                                                                                               Pr =                                           (2)
+make it easier to be detected using a 60 GHz mmWave radar with                                                        (4π)2 R4
+
+     Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on September 11,2025 at 08:23:49 UTC from IEEE Xplore. Restrictions apply.
+14962                                                                         IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 23, NO. 12, DECEMBER 2024
+
+
+
+where Pt denotes the transmit power, G represents the antenna
+gain, and σ is the radar cross section (RCS).
+   Note that λ, G, and Pt are typically configured during radar
+configuration and remain unchanged while the radar is operating.
+The RCS (σ) of a target is determined by factors such as the
+target’s material, size, and the angle with the radar. It reflects the
+radar wave reflection capability of the target. In the single-point
+reflection assumption, factors such as target size and angle are
+ignored, keeping the RCS constant for the same target [23]. Thus,
+under this assumption, the target’s SNR is mainly affected by                    Fig. 4. We represent the reflection of radar waves from the 1D target using a
+                                                                                 model with 2M+1 scatterers and analyze the impact of f and θ changes on SNR.
+the target-radar distance. When this distance stays constant, the
+sensing SNR should remain stable.
+   However, in our empirical studies, we observe that even a                     frequency of wireless signals also affects the phase differences
+slight change in a person’s posture can result in a sudden mu-                   between signals from various reflection points (as per (1)).
+tation of the SNR. This observation contradicts the conclusions                  Signals from multiple reflection points that currently cancel out
+drawn from the single-point reflection assumption. We perform                    might potentially be made to strengthen one another by changing
+more thorough experiments to examine the underlying reasons.                     the frequency of the transmitted signal. The question of how
+Fig. 15 illustrates the set-up, which comprised a person sleeping                much frequency change, denoted as coherent frequency (fd ), is
+on a bed with the radar mounted on the wall above the headboard,                 necessary to do this intuitively follows.
+about 1.2 meters from the chest. Participants were then instructed                  In this section, we investigate the influence of changes in
+to change their position slightly while still remaining supine, and              human body position and carrier frequency on SNR within
+the process was repeated ten times. Notably, these adjustments                   the multi-point reflection model. We begin by quantitatively
+were considerably minor compared to the radar-chest distance,                    analyzing these effects for 1D targets. Subsequently, we extend
+which remained relatively constant throughout the experiment.                    our conclusions to 2D and 3D targets within the context of vital
+   Using our proposed Vital-index metric, which is discussed                     sign monitoring.
+in Section IV, SNR values at different positions have been
+obtained. The results of the experiment are shown in Fig. 3(c),
+which demonstrate large variations in estimated SNR as a                         A. Mechanisms Affecting SNR in Multi-Point Reflection Model
+function of slight changes in human body position. A major                          1) Derivation Methodology: We first consider the one-
+challenge to the robustness of heartbeat detection is posed by the               dimensional scenario for the target. As illustrated in Fig. 4,
+SNR fluctuation because of user’s unpredictable and different                    we assume that the target consists of point scatterers uniformly
+sleeping positions on the bed. This variation could result in                    spaced at intervals of Δx. We assume a total of 2M + 1 scatter-
+intermittently detectable heartbeats, hindering the realization of               ers, numbered from −M to M , resulting in a total target length
+long-term robust heartbeat monitoring.                                           of L = (2M + 1)Δx. In the derivation, we employ changes
+   Under the single-point reflection assumption, it is difficult to              in the angle between the target and the radar line of sight to
+understand the sudden SNR change. This issue occurs because                      quantitatively characterize human body displacement, where the
+there are actually multiple reflection points on the target’s chest,             angle is represented as θ, as shown in Fig. 4.
+and the slight movements of the body affect the superposition                       We expect that the low SNR brought on by human body
+of these reflection point signals, resulting in significant SNR                  movement will improve if the carrier frequency is changed. We
+variations with position changes. In the next section, we will                   utilize correlation operations to quantify the extent of signal
+investigate the factors and mechanisms that affect SNR under                     change. When the carrier frequency changes, if the two signals
+the multi-point reflection model.                                                are highly correlated, they are more similar, and the SNR remains
+                                                                                 low. In contrast, there is a possibility of changing from a lower
+                                                                                 SNR to a higher one when the two signals are uncorrelated.
+   III. MODELING MULTI-POINT REFLECTIONS ON SENSING                                 Therefore, our derivation proceeds as follows: Since the re-
+                        TARGET                                                   ceived radar signal is the summation of reflections from these
+   Recall that our main goal is resolving SNR fluctuation caused                 scattering points, we calculate the cross-correlation function
+by body position adjustments. We have identified the underlying                  of the summation signal concerning changes in angle and fre-
+cause of the SNR mutation, which stems from the presence of                      quency. This helps us determine the extent of angle or frequency
+multiple reflection points on the human chest. The combina-                      variations required for the summation signal to become decor-
+tion manner of signals from these reflection points varies with                  related before and after these changes. In essence, our goal is
+changes in human body posture, leading to fluctuations in the                    to find the decorrelation intervals of the summation signal con-
+SNR. Nonetheless, we still lack a quantitative relationship of the               cerning angle and carrier frequency. The decorrelation interval
+variation in human body position required to induce the SNR                      in frequency corresponds to the expected coherent frequency
+sudden change.                                                                   (fd ).
+   To tackle SNR fluctuation, we have made an important                             2) Summation of Multi-Point Signal Reflections: We first
+observation: apart from reflection path lengths, the carrier                     derive the signal reflected back from an individual scattering
+
+    Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on September 11,2025 at 08:23:49 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: FROM SINGLE-POINT TO MULTI-POINT REFLECTION MODELING: ROBUST VITAL SIGNS MONITORING VIA mmWAVE SENSING                                        14963
+
+
+
+point in an mmWave radar system and then sum them up to                         the interchange of integration and summation, and consolidating
+obtain the summation signal.                                                    terms, we derive the:
+   We assume that the scattering point denoted as “0” in Fig. 4
+                                                                                   sy (ΔKθ )
+is located at a distance R0 from the radar. Then, we can ap-
+                                                                                                                                                              
+proximate the distance from the radar to the n-th scattering                                    
+                                                                                                M                     
+                                                                                                                      M           π/α
+                                                                                            2              −jαΔKθ l                          −jα(l−n)Kθ
+point as R0 + nΔx sin θ, where Δx is the interval between                           = |A|              e                                 e                dKθ
+                                                                                                                                  −π/α
+two adjacent scatterers. This approximation closely resembles                                   l=−M                  n=−M
+the one employed in determining phase differences among                                                                                                         (10)
+diverse antenna paths during angle measurements. Therefore,                     Introducing a change of variables Kθ = αKθ clarifies that the
+following the transmission of the radar signal, the delay from                  integral resembles the inverse discrete-time Fourier transform
+the radar to receiving the echo from the nth scattering point is                of a constant spectrum S(Kθ ) = 2π  α . Consequently, the integral
+τn = 2(R0 + nΔx sin θ)/c.
+                                                                                simplifies to the discrete impulse function 2θ
+                                                                                                                             α δ[l − n]. Leverag-
+   Assuming the slope of the chirp frequency transmitted by the
+                                                                                ing this insight reduces (10) to a single summation over l that
+mmWave radar is represented as k, the intermediate frequency
+                                                                                can be computed as follows:
+signal received by the radar from the n-th scattering point’s
+reflection is given by [24]:                                                                                    2π|A|2 sin[α(2M + 1)ΔKθ /2]
+                                                                                           sy (ΔKθ ) =
+                      sn (t) = Aej2π(kτn t+fc τn )                       (3)                                      α         sin[αΔKθ /2]
+                                                                                                                π|A|2 sin[L · ΔKθ ]
+where A denotes amplitude, fc represents the starting frequency,                                            =                                                   (11)
+also known as the carrier frequency. Notably, sn (t) is the inter-                                               Δx sin[Δx · ΔKθ ]
+mediate frequency signal typically utilized for sensing purposes                The decorrelation interval can now be established by solving
+in mmWave radar. Now we sum the signals from the 2M + 1                         (11) to identify the ΔKθ value that decreases sy to a spec-
+scattering points:                                                              ified level. Subsequently, this ΔKθ value can be translated
+                       
+                       M                                                        into equivalent alterations in frequency or aspect angle. One
+            y(t) =           Aej2π(kτn t+fc τn )                         (4)    criterion involves selecting the ΔKθ value that corresponds to
+                      n=−M                                                      the initial zero of the correlation function, marked by the numer-
+                                                                                ator’s argument reaching π [23]. Utilizing (11) and considering
+                       
+                       M
+                                              2(R0 +nΔx sin θ)
+                                                                                L = (2M + 1)Δx, we obtain:
+                  =          Aej2π(kt+fc )           c                   (5)
+                                                                                                                       π
+                      n=−M
+                                                                                                             ΔKθ =                            (12)
+Moving the terms in the summation that do not depend on ‘n’                                                            L
+to the front of the summation:                                                  Keep in mind that Kθ = (2π/c)F sin θ. The complete differ-
+                                    
+                                    M                                           ential of Kθ is dKθ = (2π/c) · [sin θ · dF + F cos θ · dθ]. To
+              j2π(kt+fc )2R0 /c
+  y(t) = Ae                                 ej4πnΔx sin θ(fc +kt)/c      (6)    establish the decorrelation interval in angle for a fixed radar
+                                  n=−M                                          frequency, set dF = 0, resulting in dKθ = (2π/c) · F cos θ ·
+To simplify the notation, define:                                               dθ, thus yielding dKθ = (2π/c) · F cos θ · Δθ. Likewise, to
+                                                                                achieve signal decorrelation, we determine the necessary fre-
+                           2πF          2π                                      quency step by maintaining a constant aspect angle θ, resulting
+  F = kt + fc , Kθ =           sin θ =     sin θ, α = 2Δx (7)
+                             c           λ                                      in dKθ = (2π/c) · sin θ · ΔF . When combining these relations
+Here, F involves frequency-related component, and Kθ encom-                     with (12), we derive the necessary changes in aspect angle and
+passes both aspect angle (θ) and radar frequency (F ) that we are               frequency to achieve decorrelation of the radar signal amplitude.
+interested in. Finally, the summation signal can be simplified as:                                       c                          c
+                                                                                           Δθ =                  , fd = ΔF =                  (13)
+                                      2R0    
+                                             M                                                     2F · L cos θ                  2L sin θ
+             y(t; Kθ ) = Aej2πF c                  ejαKθ n               (8)    It’s worth noting that L cos θ represents the target’s extent
+                                            n=−M                                projected perpendicular to the radar boresight, whereas L sin θ
+   3) Calculating Decorrelation Intervals for Aspect Angle and                  represents the projection along the radar’s boresight. As a result,
+Radar Frequency: We note that Kθ contains both the aspect                       the decorrelation interval in aspect angle is determined by the
+angle and radar frequency, and our main focus is the impact on                  target’s width as viewed from the radar, while the interval in
+the signal when these two parameters change. Therefore, the                     frequency is driven by the depth.
+problem now shifts to understanding how y(t; Kθ ) is affected                      4) Decorrelation Intervals in Vital Sign Monitoring Scenar-
+by variations in Kθ . Hence, we calculate the auto-correlation                  ios: In the context of vital sign monitoring, as illustrated in
+function of Kθ with intervals of ΔKθ :                                          Fig. 5, a person lies in bed with a 60 GHz mmWave radar
+                    π/α                                                        mounted on the wall above the headboard. The radar observes
+      sy (ΔKθ ) =         y(t; Kθ )y ∗ (t; Kθ + ΔKθ )dKθ (9)                    the person’s chest at a 45-degree angle, with the chest size
+                        −π/α                                                    approximately measuring 0.5 meters. Using (13), we can com-
+The complex exponential terms outside the summation in (8)                      pute a decorrelation interval of 0.4 degrees and a decorrelation
+can mutually cancel out in (9). Substituting (8) into (9), through              frequency of 0.42 GHz.
+
+    Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on September 11,2025 at 08:23:49 UTC from IEEE Xplore. Restrictions apply.
+14964                                                                         IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 23, NO. 12, DECEMBER 2024
+
+
+
+
+                                                                                 Fig. 6. Simulation results for SNR fluctuations with minor changes in human
+                                                                                 body position.
+Fig. 5. A slight 0.4o change in θ could switch SNR between good and poor.
+A 0.42 GHz frequency change might also toggle SNR between good and poor.
+
+
+
+   A 0.4-degree angle decorrelation interval implies that a mere
+0.4-degree shift in the radar’s viewing angle, caused by hu-
+man motion, disrupts the correlation between signal amplitudes
+before and after this shift. Notably, this 0.4-degree change is
+exceptionally sensitive, as even minor body movements can
+achieve such an alteration. In essence, the SNR is initially high
+                                                                                 Fig. 7. Simulation results for SNR fluctuations with changing carrier
+when there’s no bodily motion, but even a slight movement                        frequency.
+can significantly reduce the SNR. This provides a theoretical
+explanation for the SNR mutation phenomenon.
+   A 0.42 GHz frequency decorrelation interval means that, even
+                                                                                 Furthermore, when the carrier frequency exceeds the theoreti-
+when the human body is stationary, shifts in the radar signal’s
+                                                                                 cally calculated 0.42 GHz, the SNR shows significant fluctua-
+carrier frequency greater than 0.42 GHz can significantly impact
+                                                                                 tions, consistent with our theoretical expectations.
+the signal’s SNR. Our mmWave radar, with a bandwidth of up to
+                                                                                    To approach a more realistic scenario, we also conducted
+4 GHz, easily accommodates a 0.42 GHz frequency shift. This
+                                                                                 simulations in a three-dimensional context. We modeled the
+forms the basis of our strategy to mitigate the SNR fluctuations
+                                                                                 human chest as a semi-cylinder with a diameter of 15cm and a
+caused by human motion and enhance the robustness of heartbeat
+                                                                                 height of 50 cm. Then, we evenly distributed 15 scattering points
+monitoring.
+                                                                                 on the surface of this semi-cylinder. The remaining settings
+                                                                                 were similar to the 2D simulations. The simulation results are
+B. Simulation Validation for Vital Sign Monitoring Scenarios                     presented in Figs. 6 and 7, and the conclusions are consistent
+   The preceding section’s derivation established a solid theoret-               with those of the 2D scenario.
+ical basis for comprehending the factors influencing SNR arising                    The simulation results in both 2D and 3D scenarios validate
+from variations in both human body position and radar carrier                    the applicability of our theoretical derivations. They also confirm
+frequency. This theoretical framework provides essential guid-                   the potential to enhance the robustness of heartbeat monitoring
+ance for our experimental work. However, the previous deriva-                    by varying the carrier frequency in response to the low SNR
+tion was grounded in ideal one-dimensional target scenarios,                     caused by human body movement. In the next section, we will
+whereas practical situations involve two or three-dimensional                    propose specific methods based on the conclusions drawn in this
+targets. In this section, we will demonstrate simulation outcomes                section.
+for 2D and 3D scenarios, employing vital sign monitoring as an
+example.
+                                                                                      IV. ROBUST-VITAL DESIGN: LEVERAGING FREQUENCY
+   We begin with simulations in a two-dimensional scenario.
+The simulation setup is similar to Fig. 5, where we assume the                                          DIVERSITY
+human chest is a 30 cm × 50 cm plane. Next, we hypothesize                          This section introduces the design of Robust-Vital. Robust-
+the presence of 15 scattering points uniformly distributed across                Vital achieves long-term robust tracking of vital signs by lever-
+this plane. Subsequently, we compute the sum of signals received                 aging the frequency diversity of the mmWave radar. Fig. 8 shows
+by the radar from these scattering points. Assuming a constant                   the system overview of Robust-Vital, which involves three main
+noise level, the SNR is proportional to the power of the received                modules:
+signal. We systematically vary the radar’s carrier frequency and                    r Data Collection: In this module, we utilize mmWave radar
+human body position to observe how the relative SNR changes.                           for capturing signals associated with human vital signs.
+It’s worth noting that the magnitude of simulated human body                           These signals are then forwarded to the high SNR gener-
+position variations is on the order of a few centimeters.                              ation module in the form of Intermediate Frequency (IF)
+   The results are shown in Figs. 6 and 7. We observe that                             signals.
+even slight movements of the human body can cause substan-                          r High SNR Signal Generation: This module takes IF signals
+tial changes in SNR, in line with our theoretical predictions.                         as input and outputs a composite signal of vital signs with a
+
+    Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on September 11,2025 at 08:23:49 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: FROM SINGLE-POINT TO MULTI-POINT REFLECTION MODELING: ROBUST VITAL SIGNS MONITORING VIA mmWAVE SENSING                                       14965
+
+
+
+
+Fig. 8.   System overview of Robust-Vital.
+
+
+
+                                                                                      In practice, we utilized the Calterah radar CAL60S244 [12],
+                                                                                  operating in the frequency range of 60 to 64 GHz. To identify
+                                                                                  high SNR carrier frequencies within its operational bandwidth,
+                                                                                  we employed two different bandwidth settings: 0.5 GHz and
+                                                                                  0.8 GHz. For the 0.5 GHz bandwidth, we selected starting
+                                                                                  frequencies ranging from 60 GHz to 63.5 GHz, with increments
+Fig. 9. The implementation of frequency diversity based on time-division          of 0.5 GHz. Consequently, we obtained a total of 8 signals with
+multiplexing by segmenting chirp signals.
+                                                                                  different frequencies. For the 0.8 GHz bandwidth, we selected
+                                                                                  starting frequencies ranging from 60 GHz to 63.2 GHz, with in-
+                                                                                  crements of 0.8 GHz. This yielded a total of 5 signals. In total, we
+      high SNR. This process involves initially acquiring multi-                  acquired 13 signals with different frequencies and bandwidths.
+      frequency signals, followed by using our proposed Vital-                    We opted for narrower bandwidths because larger bandwidths
+      index metric to identify several carrier frequencies with                   increase the likelihood of including carrier frequencies with
+      favorable SNRs. These selected signals are then combined                    lower SNRs.
+      to obtain a high SNR signal, preparing it for vital sign                        We acknowledge that the method of segmenting the IF signals
+      extraction.                                                                 reduces effective bandwidth, thereby affecting range resolution.
+    r Robust Vital Signs Estimation: This module estimates vital                  However, in vital signs monitoring, bandwidth is not a critical
+      signs of the human body based on the high SNR signal. The                   metric, as its size does not impact the radar’s ability to capture
+      vital signs encompass respiration rate, heart rate, and heart               subtle chest movements.
+      rate variability.                                                               2) Signal Prepocessing: Signal preprocessing involves uti-
+                                                                                  lizing 1D FFT to process the IF signal into individual range bins.
+                                                                                  Subsequently, beamforming is performed using a 4-transmit,
+A. High SNR Signal Generation                                                     4-receive antennas in the Calterah radar to enhance the SNR.
+   This module involves first acquiring signals at multiple fre-                      For each frequency, we obtain complex signal variations over
+quencies. We then utilize our proposed Vital-index metric to                      time that are associated with vital signs. This is achieved by
+identify and retain carrier frequencies with higher SNRs, dis-                    performing a 1D Fast Fourier Transform (FFT) on each chirp
+carding those with poorer SNRs. Subsequently, these selected                      and then extracting the signal from the target range bin, as
+signals are combined to obtain a more higher SNR signal,                          detailed in [25]. The projection of the complex signal along
+preparing it for vital sign estimation.                                           the time dimension on the IQ complex plane is illustrated in
+   1) Segmenting Favorable Carrier Frequencies: To search for                     Fig. 10(a). The complex signals displayed in the Fig. 10(a)
+carrier frequencies with favorable SNRs, we first need signals                    represent dynamic signals after static removal using circular
+at multiple frequencies. However, the modulation scheme of                        fitting [25]. We can observe that the complex vector undergoes
+mmWave radar currently cannot simultaneously transmit sig-                        rotation in response to chest vibrations. The phase changes
+nals at different frequencies. Therefore, our key insight behind                  over time of the complex vector are shown in Fig. 10(b). We
+obtaining multi-carrier frequency signals is to use time-division                 also employed the common multi-antenna-based beamforming
+multiplexing by segmenting chirp signals.                                         technique to enhance the SNR for each carrier frequency [9].
+   As depicted in Fig. 9, we segment a sampled chirp signal based                     3) Evaluating SNRs of the Multi-Frequency Signals: Among
+on our specified starting frequency and bandwidth. Since the                      all carrier frequencies, some exhibit high SNR, while others have
+time intervals between the resulting N sub-chirps are extremely                   low SNR. Our objective is to retain the good ones and discard
+short, they can be treated as simultaneously transmitted. Apply-                  the poor ones. Consequently, SNR calculations are necessary
+ing this method to each chirp enables us to acquire sampled vital                 for each carrier frequency. However, due to the mixture of noise
+sign signals at N carrier frequencies.                                            and signal, accurately segregating their energies is challenging,
+
+      Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on September 11,2025 at 08:23:49 UTC from IEEE Xplore. Restrictions apply.
+14966                                                                               IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 23, NO. 12, DECEMBER 2024
+
+
+
+                                                                                         The Vital-index we propose is only an approximation of the
+                                                                                      SNR. This is because the variance of the absolute values of CS
+                                                                                      does not represent the energy of complex signal noise but rather
+                                                                                      the energy of this noise in the one-dimensional projection along
+                                                                                      the radial direction, providing an approximate value. The noise
+                                                                                      energy of the complex signal cannot be accurately calculated,
+                                                                                      because it is impossible to determine the precise position of
+                                                                                      the dynamic vector at each moment. We will demonstrate the
+                                                                                      effectiveness of this metric in the evaluation section.
+                                                                                         4) Refining the Chosen Frequencies: Using the Vital-index,
+                                                                                      we can evaluate the SNR of the 13 different carrier frequency
+                                                                                      signals generated in Section IV-A1. In our dataset, we have ob-
+                                                                                      served that signal quality is good when the Vital-index exceeds
+                                                                                      50, and moderate when it surpasses 25. However, when this index
+                                                                                      drops below 25, signal quality significantly deteriorates, posing
+                                                                                      challenges for robust heart rate monitoring. Our strategy for
+                                                                                      retaining signals with good SNRs is to keep all carrier frequen-
+                                                                                      cies with a Vital-index exceeding 50. If the number of carrier
+                                                                                      frequencies exceeding 50 does not exceed four, we supplement
+                                                                                      them with frequencies with Vital-index values greater than 25,
+                                                                                      in descending order, until we reach four frequencies. If we still
+                                                                                      don’t have four carrier frequencies after supplementation, we
+                                                                                      do not continue to supplement further; we retain the number we
+                                                                                      have.
+                                                                                         Because the starting frequencies of the thirteen carrier fre-
+Fig. 10. High SNR signal generation. (c) Shows two signals at different
+frequencies, selected using our Vital-index for their high SNR. To fuse them, we
+                                                                                      quency signals generated in Section IV-A1 are fixed and have
+align the phases of these signals. (d) Demonstrates that after fusion, the phase      certain intervals, the selected carrier frequencies around them
+quality is notably improved compared to before fusion (b), resulting in a clearer     may not necessarily be optimal. Slight adjustments to their
+representation of the heartbeat signal.
+                                                                                      starting frequencies could potentially yield signals with better
+                                                                                      signal-to-noise ratios. Therefore, in this subsection, we make
+                                                                                      refinements to the selected carrier frequencies.
+making direct SNR computation difficult. Therefore, we propose                           For each selected carrier frequency, we maintain its bandwidth
+the Vital-index (VI) as an approximation for SNR in vital sign                        while varying its starting frequency within ±0.2 GHz of its
+monitoring scenarios.                                                                 original frequency in 0.1 GHz steps. For example, for a signal
+   During vital sign monitoring, dynamic signals primarily result                     with a starting frequency of 61 GHz, we can obtain an additional
+from respiration, leading dynamic vectors to oscillate within                         four frequencies: 60.8 GHz, 60.9 GHz, 61.1 GHz, and 61.2 GHz.
+the complex plane. At this stage, the endpoint of the dynamic                         We then use the Vital-index to select the carrier frequency with
+vector forms an arc, as depicted in Fig. 10(a), where the signal’s                    the best SNR as the refined carrier frequency.
+magnitude corresponds to the arc’s radius. Due to the presence                           5) Fusing Signals of Selected Frequencies: The key to merg-
+of noise, the distances of sampled points from the arc’s center                       ing multiple signals lies in aligning the phases of these sig-
+don’t precisely match the radius. When all the points’ distances                      nals [23], [26], ensuring that they are in phase with each other to
+to the center are closer to the radius, it indicates that these points                enhance mutual reinforcement during superposition. Using the
+are tightly distributed around the arc, implying lower noise.                         two signals illustrated in Fig. 10(c) as an example, the fusion
+Conversely, in the presence of higher noise, the discrepancies                        process hinges on determining an angle, denoted as θ, such that
+between these distances and the radius increase. Hence, we opt                        rotating the orange signal at carrier frequency f1 by this angle
+to quantify noise energy using the variance of these distances                        aligns it in phase with the blue signal at carrier frequency f2 .
+from the radius. The larger the noise, the greater the variance.                      Once phase alignment is achieved, the signals can be added
+   Assuming there are K complex samples within a time win-                            together to enhance the SNR.
+dow, Vital-index (VI) can be computed as follows:                                        Mathematically, this rotation is achieved by multiplying the
+                              1
+                                K               2                                    signal CS2 by ejθf , where CSf2 denotes the signal at carrier
+                           (K      i=1 |CS(i)|)
+                    VI =                                          (14)                frequency f2 . Therefore, the summation signal can be expressed
+                                 var(|CS|)
+                                                                                      as:
+where CS denotes the complex signal in the time window.
+Since CS is the complex signal after static clutter removal, the                            SC(i) = CSf1 (i) + CSf2 (i) · ejθf , i = 1. . .K                 (15)
+center of the arc corresponds to the origin of the coordinate
+axis. Therefore, we estimate the signal’s magnitude by using the                      where SC denotes the summation complex signal. So, the
+average distance of these sampled points to the origin.                               remaining question becomes how to determine θf .
+
+    Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on September 11,2025 at 08:23:49 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: FROM SINGLE-POINT TO MULTI-POINT REFLECTION MODELING: ROBUST VITAL SIGNS MONITORING VIA mmWAVE SENSING                                       14967
+
+
+
+
+Fig. 11.   Spectrum of the phase. Respiration rate (rr) can be easily solved.     Fig. 12.   Spectrum of the second-order phase difference. fhr denotes heart
+                                                                                  rate.
+
+
+   We treat the problem as an optimization task by searching                      frequency range for respiratory rate is 8 to 35 breaths per minute
+for the angle θf that maximizes the dynamic energy of SC.                         (bpm).
+The definition of dynamic energy here is the summation of the                        Given the vulnerability of the fundamental heart rate fre-
+amplitudes of all sampled points after static removal, that is,                   quency to respiratory harmonics interference [19], [28], [29], we
+the amplitude of dynamic vector [9]. The dynamic energy after                     opt to compute the heart rate using its harmonics, which exhibit
+signal addition is maximized only when the two signals are                        higher frequencies. To achieve this, we apply a second-order
+completely in phase with each other. Therefore, the optimization                  difference to the phase signal before its transformation into
+function is formulated as follows:                                                the frequency domain. This second-order difference essentially
+                                                                                  serves as a high-pass filter [30]. The resultant phase spectrum
+                             
+                             K
+                                                                                  after this difference is illustrated in Fig. 12, allowing for the
+     max Dyn(SC) =                  |CSf1 (i) + CSf2 (i) · ejθf |          (16)
+              θf                                                                  clear identification of peaks associated with different heart rate
+                              i=1
+                                                                                  harmonics.
+We performed a search with a step size of 1◦ , iterating from 0◦                     Our heart rate calculation process comprises two steps. First,
+to 360◦ . We also explored other optimization objectives, such                    we identify the strongest harmonic of the heartbeat. Second, we
+as maximizing the energy in the frequency band corresponding                      determine the heart rate by associating it with the corresponding
+to the heartbeat, and found that the results were similar to                      harmonic of the heartbeat. Our heart rate measurement range
+maximizing dynamic energy.                                                        is from 50 to 120 beats per minute (bpm). In the first step, we
+   The technique for combining signals from two carrier fre-                      search for the strongest peak within the range of 100 to 245 bpm.
+quencies has been outlined earlier. Extending this approach                       This peak’s frequency may correspond to the 2nd, 3rd, or 4th
+to fuse multiple signals proceeds similarly. We designate one                     harmonic of the heartbeat, denoted as fhar .
+carrier frequency as the reference signal and align the phases                       Next, we will utilize the peaks of the remaining heart rate
+of the other carrier frequencies’ signals with the reference                      harmonics to assist us in determining which harmonic of the
+signal by employing the previously discussed rotation angle                       heartbeat corresponds to fhar . Specifically, we search for the
+determination method. Ultimately, these phase-aligned signals                     three strongest peaks, excluding fhar , within the range of
+are straightforwardly summed to produce the ultimate high SNR                     100 bpm to 480 bpm, as these peaks are likely to be harmonics
+signal. Fig. 10(d) displays the phase extracted from the superim-                 of the heartbeat. These peaks correspond to frequencies denoted
+posed signal fused from signals of five carrier frequencies. As                   as set:
+compared to Fig. 10(b), it’s evident that noise in the signal has
+significantly attenuated, and the signal related to the heartbeat                                           F = {fhi |i = 1, 2, 3}                             (17)
+is more clearly manifested.                                                       Then, we sequentially assume fhar to be the second, third, and
+                                                                                  fourth harmonic of the heartbeat and calculate the heart rate for
+B. Robust Vital Signs Estimation                                                  each assumption:
+   Our target vital signs encompass three aspects: respiratory                                           fk = fhar /k, k = 2, 3, 4                             (18)
+rate, heart rate, and heart rate variability (HRV). HRV extraction
+is motivated by the fact that a healthy heart does not beat                       We identify all harmonics of fk between 100 bpm and 480 bpm,
+at regular intervals [27]. In essence, the patterns of a healthy                  denoted as set Hk . Then, we calculate the error between Hk
+heart are nonlinear and provide higher-dimensional information                    and F , with the aim of minimizing this error to determine the
+compared to heart rate, which is more stable. We employ the                       harmonic frequency of fhar . Our method for calculating the
+Interbeat Interval (IBI) as the HRV index.                                        error between Hk and F is as follows: for each element in F ,
+   1) Heart Rate and Respiration Rate Estimation: Calculating                     we find the closest value in Hk , and the difference between these
+the respiratory rate is straightforward. We begin by performing                   values is considered the error. By iterating through each element
+an FFT on the phase of the fusion signal, resulting in the                        of F and summing the errors, we obtain the total error between
+spectrum shown in Fig. 11. By seeking peaks within the fre-                       Hk and F , denoted as ek .
+quency range associated with respiratory rate, the highest peak
+is pinpointed, representing the respiratory rate. Our selected                                                 k ∗ = arg min ek                                (19)
+                                                                                                                             k
+
+
+      Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on September 11,2025 at 08:23:49 UTC from IEEE Xplore. Restrictions apply.
+14968                                                                              IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 23, NO. 12, DECEMBER 2024
+
+
+
+
+                                                                                     Fig. 14.   The mmWave radar. [12].
+
+
+
+
+Fig. 13.   Recovered heartbeat signal and extracted timings of each beat.
+
+
+
+where k ∗ represents the most probable number of heartbeat
+                                                                                     Fig. 15.   Monitoring scenario.
+harmonics for fhar . Therefore, the heart rate can be calculated
+as:
+                              fh = fhar /k ∗                                (20)     the arrangement of its antenna array. The radar sends 1000
+                                                                                     chirps per second, with each chirp having a duration of 60 us.
+   2) Interbeat Interval Segmentation: To extract the interbeat
+                                                                                     The data processing occurs on a ThinkPad laptop equipped
+interval, we employ the VMD algorithm, which decomposes
+                                                                                     with an Intel i7-8750H processor and 16 GB of memory. The
+the phase signal into distinct modes known as Intrinsic Mode
+                                                                                     window we set for computing vital signs is 10 seconds. Signal
+Functions (IMFs) through variational calculus [15], [31]. Each
+                                                                                     processing is implemented using Matlab. The radar’s sampled
+IMF is centered around a specific frequency with a narrow
+                                                                                     data is transmitted to the laptop via a TCP connection upon
+bandwidth. These separated IMFs correspond to the fundamen-
+                                                                                     capturing reflection signals.
+tal components of respiration and heartbeat, as well as their
+                                                                                        2) Data Collection: The data collection setup is shown in
+respective harmonics [15], [32].
+                                                                                     Fig. 15, with the radar mounted on the wall beside the bed
+   Since we already know the heartbeat’s frequency, we can
+                                                                                     to monitor sleeping individuals’ vital signs. Ground truth data
+identify the IMFs corresponding to each harmonic of the heart-
+                                                                                     was recorded using the Heal Force PC-3000 multi-parameter
+beat and sum them to obtain the heartbeat’s time-domain wave-
+                                                                                     monitor, capable of tracking vital signs like respiration rate and
+form, as depicted in Fig. 13. IBIs depend on the timing of
+                                                                                     ECG data. The ECG data is subsequently processed to extract
+each heartbeat, which we determine by detecting peaks in the
+                                                                                     heart rate and heart rate variability. We recruited a total of 12
+heartbeat signal. Because within a heartbeat signal, apart from
+                                                                                     volunteers, including 4 females, to collect data in four different
+the strongest peak, numerous smaller peaks should not be de-
+                                                                                     rooms. All volunteers are fully informed about the experimental
+tected. We establish a minimum time gap between the two peaks
+                                                                                     content and participate voluntarily. Robust-Vital operated during
+based on the heart rate. The minimum interval is set to 70% of
+                                                                                     the volunteers’ overnight sleep, yielding 27 nights of data and
+the average time between heartbeats using the heart rate. The
+                                                                                     over 180 hours of experimentation.
+output of our peak detection algorithm is displayed in Fig. 13,
+demonstrating precise recovery of beat timings.
+                                                                                     B. Overall Performance
+                             V. EVALUATION                                              1) Evaluation of Heart Rate and Respiration Rate Monitor-
+                                                                                     ing: The heart rate estimation error is defined as the absolute
+   In this section, we evaluate Robust-Vital’s performance by
+                                                                                     difference between the estimated heart rate (HE ) and the actual
+conducting long-term experiments in real-world home envi-
+                                                                                     heart rate (HA ), that is, |HE − HA |. We evaluate the heart
+ronments. We evaluate Robust-Vital on different environments,
+                                                                                     rate estimation performance of Robust-Vital in comparison to
+participants, and radars. Over 180 hours of data substantiate the
+                                                                                     mmECG. [16]. mmECG. is one of the state-of-the-art research
+robustness of Robust-Vital in monitoring heart rate and heart
+                                                                                     proposals that utilize mmWave radar for heart rate estimation
+rate variability.
+                                                                                     in low SNR conditions. Fig. 16(a) shows the Cumulative Distri-
+                                                                                     bution Function (CDF) of heart rate estimation errors across all
+A. Experiment Setup                                                                  experiments. Robust-Vital achieves a median error of 0.36 bpm.
+  1) Implementations: Our system utilizes Calterah’s                                 In comparison, mmECG’s [16] median error in heart rate is
+CAL60S244-IB radar sensor chip, which features a 4 TX                                2.27 bpm, with a relatively long tail, indicating vulnerability
+and 4 RX antenna array [12]. This chip integrates a single-chip                      to SNR fluctuations.
+FMCW radar sensor designed for operation in the 60 to                                   The respiration rate estimation error is defined as the absolute
+64 GHz band. Fig. 14 provides a visual representation of the                         difference between the estimated respiration rate (RE ) and the
+physical appearance of the CAL60S244-IB radar device and                             actual respiration rate (RA ), that is, |RE − RA |. We evaluate
+
+    Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on September 11,2025 at 08:23:49 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: FROM SINGLE-POINT TO MULTI-POINT REFLECTION MODELING: ROBUST VITAL SIGNS MONITORING VIA mmWAVE SENSING                                       14969
+
+
+
+                                                                      TABLE I
+                                            COMPARISON OF ROBUST-VITAL PERFORMANCE ACROSS VARIOUS USERS
+
+
+
+
+                                                                                  Fig. 17.   Pictures of four different bedrooms.
+
+Fig. 16.   Overall performance of Robust-Vital.
+
+
+                                                                                  C. User and Environment Factors Study
+the respiration rate estimation performance of Robust-Vital in                       We evaluate several practical factors that may influence the
+comparison to Ahmad et al. [18]. Because of the substantial                       applicability of Robust-Vital in real-world scenarios.
+amplitude of respiratory movement, it is minimally impacted by                       1) Impact of Different Users: To evaluate the performance
+SNR fluctuations. Hence, traditional mmWave radar methods                         of Robust-Vital across various users, we recruited 12 partici-
+can proficiently determine the user’s respiration rate. Ahmad                     pants (including 4 females). The participants’ ages ranged from
+et al. [18] is considered a classic and state-of-the-art approach                 20 and 56 years (μ = 32.75), with weights between 50 and
+in wireless signal based respiration rate monitoring. Robust-                     87 kg (μ = 65.25), and heights ranging from 162 and 186 cm
+Vital achieves a median error of 0.18 bpm. As a comparison, the                   (μ = 172.5). During the experiments, these participants wore
+median error of respiration rate of Ahmad et al. is 0.23 bpm. As                  their regular sleepwear and slept normally without any additional
+our primary focus is on the robustness of heartbeat monitoring,                   requirements. They were free to sleep in their preferred positions
+we will no longer report the evaluation of respiration in the                     and follow their usual sleep habits.
+upcoming sections.                                                                   The experimental results involving different users and Robust-
+   2) Evaluation of Heart Rate Variability Tracking: Next, we                     Vital are summarized in Table I. We provide information on
+evaluate Robust-Vital’s heart rate estimation performance in                      the physical characteristics of each individual, along with the
+comparison to mmECG [16]. mmECG is a state-of-the-art work                        median error in heart rate and IBI estimation for each partici-
+that utilizes the VMD algorithm to recover the time-domain                        pant. These results demonstrate that Robust-Vital consistently
+waveform of the heartbeat and then estimate heart rate vari-                      performs well across diverse individuals, regardless of factors
+ability. We employ the Interbeat Interval (IBI) to evaluate                       like height, weight, gender, and more.
+Robust-Vital’s heart rate estimation performance. Fig. 16(b)                         2) Impact of Different Rooms: To get the best performance
+demonstrates the CDF of IBI measurement errors across all                         of Robust-Vital, we study the impact of different rooms by
+experiments. We can see that Robust-Vital achieves a median                       deploying Robust-Vital in four different bedrooms, as shown
+error of 5.88 ms for the IBI of the users. In contrast, mmECG                     in Fig. 17. In all four environments, this is common furniture,
+exhibits a significantly higher median error of 33.61 ms, indicat-                such as beds, desks, chairs, and wardrobes. These four different
+ing inferior performance compared to our system. This outcome                     bedrooms vary in terms of their size, layout, as well as the size
+underscores Robust-Vital’s ability to robustly adapt to various                   and placement of the beds. Consequently, this results in varying
+scenarios during actual user sleep when estimating heart rate                     distances between the radar and the individuals lying on the bed,
+variability.                                                                      ranging from 0.8 meters to 1.5 meters.
+
+      Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on September 11,2025 at 08:23:49 UTC from IEEE Xplore. Restrictions apply.
+14970                                                                         IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 23, NO. 12, DECEMBER 2024
+
+
+
+
+Fig. 18.   Pictures of four different sleeping postures.
+
+                                                                                 Fig. 21.   Robust-Vital performance across different radar devices.
+
+
+
+
+                                                                                 minor error variations among these postures. Flat and face-down
+                                                                                 sleeping show lower errors, followed by right-side sleeping,
+                                                                                 while left-side sleeping displays the largest error. Speci-
+                                                                                 fically, median heart rate estimation errors for flat, left-side,
+                                                                                 right-side, and face-down sleeping are 0.31, 0.48, 0.37, and
+                                                                                 0.33 bpm, respectively. The corresponding IBI estimation errors
+                                                                                 are 5.23, 7.17, 5.90, and 5.53 ms.
+Fig. 19.   Robust-Vital performance across different rooms.                         Flat and face-down positions offer larger reflective areas,
+                                                                                 resulting in better SNRs and improved performance. Conversely,
+                                                                                 left-side sleeping, with the heart positioned on the left side,
+                                                                                 leads to smaller vibrations sensed by the radar on the right
+                                                                                 side of the chest cavity, resulting in lower SNRs and increased
+                                                                                 susceptibility to noise interference. Despite the larger errors
+                                                                                 during left-side sleeping, the heart rate error of 0.48 bpm and
+                                                                                 IBI estimation error of 7.17 ms remain within an acceptable
+                                                                                 range, significantly surpassing current state-of-the-art methods.
+                                                                                 Therefore, these experimental findings affirm the effective per-
+                                                                                 formance of Robust-Vital across diverse sleeping postures.
+                                                                                    4) Impact of Different Radar Devices: Radar models of dif-
+Fig. 20.   Robust-Vital performance across sleeping postures.                    ferent types may exhibit variations in performance due to dif-
+                                                                                 ferences in carrier frequencies and manufacturers. To assess
+                                                                                 the system’s adaptability to different devices, we conducted
+                                                                                 evaluations with two additional radar models, CAL70S244-AB
+   Fig. 19(a) and (b) show the errors in heart rate estimation
+                                                                                 (manufactured by Calterah) [12] and AWR2944 (from Texas
+and IBI estimation, respectively. In detail, the median heart
+                                                                                 Instruments) [10].The CAL70S244-AB radar operates within
+rate estimation errors for the four rooms are 0.38, 0.32, 0.37,
+                                                                                 the 76 GHz to 81 GHz frequency range, while the AWR2944
+and 0.33 bpm, respectively. The IBI estimation errors for these
+                                                                                 is a Texas Instruments mmWave radar with the same frequency
+rooms are 5.95, 5.82, 6.32, and 5.48 ms, respectively. This
+                                                                                 range.
+demonstrates that Robust-Vital’s performance generalizes well
+                                                                                    Fig. 21(a) and (b) present the heart rate and IBI estima-
+across different rooms.
+                                                                                 tion errors for these three radar products. Specifically, for the
+   3) Impact of Different Sleeping Postures: Since individuals’
+                                                                                 CAL60S244-IB, CAL70S244-AB, and AWR2944 radar mod-
+sleeping positions are uncontrolled and variable, they may sleep
+                                                                                 els, the median errors in heart rate estimation are 0.37, 0.35,
+in a flat, side, or even face-down position. These variations
+                                                                                 and 0.36 bpm, respectively, and the errors in IBI estimation are
+result in differences in the chest area exposed to radar waves,
+                                                                                 5.79, 5.48, and 6.07 ms, respectively. Our findings reveal that
+with larger areas when lying flat or face down. Furthermore,
+                                                                                 LoCal consistently performs well across all three radar models,
+different parts of the chest cavity experience varying degrees
+                                                                                 demonstrating the system’s ability to generalize effectively to
+of movement due to vital signs, leading to variations in signal
+                                                                                 various radar devices.
+fluctuations. Therefore, we evaluate Robust-Vital’s performance
+under different sleeping postures by categorizing them into four
+types: flat, left-side, right-side, and face-down posture, as shown              D. Multi-Point Reflection Model Study
+in Fig. 18.                                                                         The essence of Robust-Vital is to enhance the robustness of
+   Fig. 20(a) and (b) illustrate errors in heart rate and IBI                    the sensing system by leveraging the varying SNR at different
+estimation for four different sleeping postures. We observe                      carrier frequencies within a multi-point reflection model. Thus,
+
+
+    Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on September 11,2025 at 08:23:49 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: FROM SINGLE-POINT TO MULTI-POINT REFLECTION MODELING: ROBUST VITAL SIGNS MONITORING VIA mmWAVE SENSING                                       14971
+
+
+
+
+Fig. 22.   The vital signs signal at different frequencies.                       Fig. 24.   Ablation study of Robust-Vital.
+
+
+
+
+                                                                                     We used a single-frequency signal at 60 GHz. Fig. 24(a)
+                                                                                  illustrates the comparison of heart rate estimations. It’s clear
+                                                                                  that using only a single-frequency signal results in a consistent
+                                                                                  decline in heart rate estimation quality. More precisely, the me-
+                                                                                  dian error in heart rate estimation with a single-frequency signal
+                                                                                  is 3.06 bpm, which is considerably worse than Robust-Vital’s
+                                                                                  0.36 bpm. These findings highlight the substantial improvement
+                                                                                  in robustness for heart rate estimation brought about by our
+Fig. 23.   Results of Vital-index changes with frequency.                         multi-frequency signal based SNR enhancement module.
+                                                                                     Fig. 24(b) illustrates a comparison between IBI estimation
+                                                                                  using a single-frequency signal and Robust-Vital. The superi-
+                                                                                  ority of Robust-Vital, which utilizes multi-frequency signals, is
+in this subsection, we verify the correctness of the multi-point                  evident, as it substantially reduces errors compared to single-
+reflection model.                                                                 frequency signal usage. Specifically, the median error in IBI
+   As introduced in Section III, under the multi-point reflection                 estimation using a single-frequency signal is 44.05 ms, signifi-
+model, we established the conclusion that variations in both                      cantly higher than Robust-Vital’s 5.88 ms. These results, com-
+human body position and signal carrier frequency can induce                       bined with the heart rate estimation comparison, confirm that
+changes in the SNR. Therefore, we validate the correctness of                     the multi-frequency signal based SNR enhancement technique
+the multi-point reflection model and its conclusions by observing                 significantly improves the robustness of the Robust-Vital, as
+whether the SNR exhibits significant changes as expected when                     demonstrated in these ablation experiment results.
+human body position or signal carrier frequency is altered.
+   We have empirically validated the impact of slight variations
+                                                                                                            VI. RELATED WORK
+in human body position on the SNR in Section II-B. Now, we
+investigate the influence of changing the signal carrier frequency                   In this section, we review existing approaches for vital signs
+while keeping the human body position stationary. The experi-                     tracking and explore related research in wireless-based and
+mental setup remains consistent, with a subject lying motionless                  mmWave-based sensing. Respiration and heartbeat, essential
+on a bed. The experimental results are presented in Fig. 22.                      indicators of human health, have garnered significant research
+Fig. 22(a) and (b) display radar signals at 60 GHz and 60.5 GHz,                  attention [14]. Current approaches for monitoring these vital
+revealing noticeable differences in their SNRs. This observation                  signs fall into two categories: contact-based and contact-free.
+is in line with our theoretical derivation of a decorrelation inter-
+val of 0.42 GHz. Additional frequency data is shown in Fig. 23.                   A. Contact-Based Vital Signs Monitoring
+We can observe that the SNR undergoes random fluctuations as
+the frequency changes. Combining the results from Section II-B,                      Contact-based sensing technologies, such as multi-parameter
+we can conclude that the experimental observations align with                     monitors [5], wearable devices [33], and earphones [34], typ-
+the theoretical predictions, thus confirming the correctness of                   ically necessitate correct device placement for accurate opera-
+the multi-point reflection model.                                                 tion. This often leads to discomfort and inconvenience, espe-
+                                                                                  cially for the users who tend to be older and less technology
+                                                                                  savvy. For instance, monitors require precise electrode place-
+E. Ablation Study                                                                 ment on the chest, significantly impacting the user’s experience.
+   Since the core module of Robust-Vital crucial for enhancing                    Wearable devices and earables can only monitor vital signs
+robustness relies on multi-frequency signal processing, we il-                    when worn, which may not always be feasible due to charging
+lustrate its significance in the system by conducting ablation                    requirements and long-term discomfort associated with contin-
+experiments and comparing it with experiments using only                          uous wear. Consequently, contact-based methods prove uncom-
+single-frequency signals.                                                         fortable and unsuitable for long-term vital sign monitoring.
+
+      Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on September 11,2025 at 08:23:49 UTC from IEEE Xplore. Restrictions apply.
+14972                                                                         IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 23, NO. 12, DECEMBER 2024
+
+
+
+B. Contact-Free Vital Signs Tracking                                                Multi-Subject Monitoring: While Robust-Vital has achieved
+                                                                                 long-term robust monitoring of an individual’s respiration rate,
+   Among contact-free methods, researchers have explored vi-
+sual approaches to monitor human vital signs. For instance, they                 heart rate, and heart rate variability, the current system cannot yet
+                                                                                 be applied in situations where there are multiple people in bed.
+utilize cameras to extract PPG signals based on deep learning
+                                                                                 In such cases, it is challenging for mmWave radar to distinguish
+techniques. However, these methods pose substantial privacy
+concerns, as few individuals are comfortable with having cam-                    between them due to their close proximity. Current methods
+                                                                                 based on blind source separation can only achieve multi-person
+eras in their bedrooms. Likewise, approaches employing micro-
+                                                                                 respiration rate monitoring. However, single-person vital sign
+phones to capture ultrasound reflections from the human body
+for vital sign monitoring encounter similar privacy issues [35].                 monitoring has already found extensive applications in scenarios
+                                                                                 such as nursing homes and hospital beds. We consider multi-
+Hence, vision and sound-based methods present deployment
+challenges in home settings.                                                     person vital sign monitoring as a future research direction.
+   Wireless signal based contact-free vital signs tracking meth-                    Early Disease Screening: While Robust-Vital has success-
+                                                                                 fully ensured stable vital sign monitoring, its full potential
+ods, typically using radio frequency (RF) signals, have received
+increasing attention for their privacy-preserving features. These                in early cardiopulmonary disease screening remains untapped.
+systems utilize wireless signals reflected off the human body                    Currently, we’ve introduced a technical approach, but a defini-
+                                                                                 tive correlation between this data and diseases is yet to be estab-
+to detect subtle vibrations caused by breathing and heartbeat
+within the chest. Researchers have employed various wireless                     lished. Our next phase involves collaboration with hospitals to
+signals such as WiFi [36], UWB [8], and mmWave radar [9],                        gather mmWave radar data from pertinent patients, enabling the
+                                                                                 genuine application of mmWave radar in early disease screening
+[18] for monitoring human vital signs. With notable progress,
+respiration can now be effectively monitored. However, ensuring                  and proactive user health management.
+the robustness of heart rate and heart rate variability (HRV)
+tracking remains a challenge, limiting the practical application                                             VIII. CONCLUSION
+of these systems.
+                                                                                    In this paper, we investigate the SNR mutation phenomenon,
+                                                                                 which has a substantial impact on the performance of mmWave-
+C. RF-Based Sensing                                                              based human vital sign monitoring systems. To tackle this,
+                                                                                 we introduce a multi-point reflection model to understand the
+   Research efforts have been devoted to contact-free hu-                        underlying causes of SNR mutation. Subsequently, we propose
+man activity sensing using diverse wireless signals, including                   a frequency diversity-based algorithm designed to alleviate its
+WiFi [37], [38], [39], Lora [40], RFID [41] , UWB [8], [42], and                 effects and enhance sensing SNR. We have implemented a
+mmWave radar [43], [44], [45], [46], [47]. These methods infer                   human heartbeat sensing system using this enhanced signal, and
+various human activities by analyzing wireless signals reflected                 it has showcased superior performance.
+from the human body, enabling a wide range of applications,
+from fine-grained vital sign monitoring [48], [49], [50], [51]
+to coarse-grained gesture recognition [52], [53], tracking [54],                                                    REFERENCES
+[55], fall detection [56], and behavior recognition [57]. Among                   [1] H. Wang et al., “Human respiration detection with commodity wifi devices:
+these wireless technologies, mmWave radar holds exceptional                           Do user location and body orientation matter?,” in Proc. ACM Int. Joint
+promise due to its extensive bandwidth, compact antennas,                             Conf. Pervasive Ubiquitous Comput., 2016, pp. 25–36.
+                                                                                  [2] Y. Wang, Z. Wang, J. A. Zhang, H. Zhang, and M. Xu, “Vital sign mon-
+and high-frequency characteristics, making it suitable for both                       itoring in dynamic environment via mmWave radar and camera fusion,”
+precise and comprehensive human activity sensing.                                     IEEE Trans. Mobile Comput., vol. 23, no. 5, pp. 4163–4180, May 2024.
+                                                                                  [3] D. W. Rowe, J. Sibert, and D. Irwin, “Heart rate variability: Indicator of
+                                                                                      user state as an aid to human-computer interaction,” in Proc. SIGCHI Conf.
+                                                                                      Hum. Factors Comput. Syst., 1998, pp. 480–487.
+                           VII. DISCUSSION                                        [4] A. H. Association, “Heart disease and stroke statistics,” 2023. Ac-
+                                                                                      cessed: Aug. 23, 2023. [Online]. Available: https://professional.heart.org/
+   In this section, we discuss the limitations and potential direc-                   en/science-news/heart-disease-and-stroke-statistics-2023-update
+tion of our future work.                                                          [5] P. Pandian et al., “Smart vest: Wearable multi-parameter remote physio-
+                                                                                      logical monitoring system,” Med. Eng. Phys., vol. 30, no. 4, pp. 466–477,
+   Bandwidth Issue: While Robust-Vital significantly enhances                         2008.
+the SNR by leveraging frequency diversity, making the moni-                       [6] A. Khushhal et al., “Validity and reliability of the apple watch for mea-
+toring of heart rate and HRV more robust, the algorithm concur-                       suring heart rate during exercise,” Sports Med. Int. Open, vol. 1, no. 06,
+                                                                                      pp. E206–E211, 2017.
+rently reduces bandwidth, leading to decreased range resolution.                  [7] X. Liu et al., “rPPG-toolbox: Deep remote PPG toolbox,”
+However, in vital signs monitoring, range resolution is not a                         2022, arXiv:2210.00716.
+pivotal metric. Resolutions of 3.75 cm (corresponding to a 4G                     [8] Z. Wang, B. Jin, S. Li, F. Zhang, and W. Zhang, “ECG-grained cardiac
+                                                                                      monitoring using uwb signals,” Proc. ACM Interactive, Mobile, Wearable
+bandwidth) or 30 cm (corresponding to a 500 M bandwidth) do                           Ubiquitous Technol., vol. 6, no. 4, pp. 1–25, 2023.
+not impact the algorithm’s performance. This is attributed to the                 [9] U. Ha, S. Assana, and F. Adib, “Contactless seismocardiography via deep
+fact that the crucial aspect of vital signs monitoring lies in the                    learning radars,” in Proc. 26th Annu. Int. Conf. Mobile Comput. Netw.,
+                                                                                      2020, pp. 1–14.
+radar signal’s ability to accurately capture the subtle vibrations in            [10] T. Instruments, “Texas instruments website about mmWave radar sensors,”
+the human thorax, with the core metric being the SNR, unrelated                       2023. Accessed: Aug. 06, 2023. [Online]. Available: https://www.ti.com/
+to bandwidth.                                                                         sensors/mmwave-radar/overview.html
+
+
+    Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on September 11,2025 at 08:23:49 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: FROM SINGLE-POINT TO MULTI-POINT REFLECTION MODELING: ROBUST VITAL SIGNS MONITORING VIA mmWAVE SENSING                                          14973
+
+
+
+[11] I. T. AG, “Infineon official website about mmWave radar sensors,” 2023.        [35] L. Wang et al., “LoEar: Push the range limit of acoustic sensing for vital
+     Accessed: Aug. 06, 2023. [Online]. Available: https://www.infineon.com/             sign monitoring,” Proc. ACM Interactive, Mobile, Wearable Ubiquitous
+     cms/en/product/sensor/radar-sensors/                                                Technol., vol. 6, no. 3, pp. 1–24, 2022.
+[12] C. S. Technology, “Calterh semiconductor technology‘s official website,”       [36] K. Ali, M. Alloulah, F. Kawsar, and A. X. Liu, “On goodness of WiFi
+     2017. Accessed: Aug. 12 2023. https://www.calterah.com/                             based monitoring of sleep vital signs in the wild,” IEEE Trans. Mobile
+[13] W. Zhang, G. Li, Z. Wang, and H. Wu, “Non-contact monitoring of human               Comput., vol. 22, no. 1, pp. 341–355, Jan. 2023.
+     heartbeat signals using mm-Wave frequency-modulated continuous-wave            [37] Y. Wang, K. Wu, and L. M. Ni, “WiFall: Device-free fall detection by
+     radar under low signal-to-noise ratio conditions,” IET Radar, Sonar Navi-           wireless networks,” IEEE Trans. Mobile Comput., vol. 16, no. 2, pp. 581–
+     gation, vol. 16, no. 3, pp. 456–469, 2022.                                          594, Feb. 2017.
+[14] F. Adib, H. Mao, Z. Kabelac, D. Katabi, and R. C. Miller, “Smart homes         [38] X. Wang et al., “Understanding the diffraction model in static multipath-
+     that monitor breathing and heart rate,” in Proc. 33rd Annu. ACM Conf.               rich environments for WiFi sensing system design,” IEEE Trans. Mobile
+     Hum. Factors Comput. Syst., 2015, pp. 837–846.                                      Comput., early access, Mar. 28, 2024, doi: 10.1109/TMC.2024.3377708.
+[15] T. Zheng, Z. Chen, C. Cai, J. Luo, and X. Zhang, “V2iFi: In-vehicle vital      [39] Z. Yao, X. Wang, K. Niu, R. Zheng, J. Wang, and D. Zhang, “Wiprofile:
+     sign monitoring via compact RF sensing,” Proc. ACM Interactive, Mobile,             Unlocking diffraction effects for sub-centimeter target profiling using
+     Wearable Ubiquitous Technol., vol. 4, no. 2, pp. 1–27, 2020.                        commodity wifi devices,” in Proc. 30th Annu. Int. Conf. Mobile Comput.
+[16] X. Xu et al., “mmECG: Monitoring human cardiac cycle in driving                     Netw., 2024, pp. 185–199.
+     environments leveraging millimeter wave,” in Proc. IEEE Conf. Comput.          [40] Z. Chang, F. Zhang, J. Xiong, J. Ma, B. Jin, and D. Zhang, “Sensor-free
+     Commun., 2022, pp. 90–99.                                                           soil moisture sensing using LoRa signals,” Proc. ACM Interactive, Mobile,
+[17] G. Ramachandran and M. Singh, “Three-dimensional reconstruction of                  Wearable Ubiquitous Technol., vol. 6, no. 2, pp. 1–27, 2022.
+     cardiac displacement patterns on the chest wall during the P, QRS and          [41] X. Liu et al., “Accurate localization of tagged objects using mobile RFID-
+     T-segments of the ECG by laser speckle inteferometry,” Med. Biol. Eng.              augmented robots,” IEEE Trans. Mobile Comput., vol. 20, no. 4, pp. 1273–
+     Comput., vol. 27, pp. 525–530, 1989.                                                1284, Apr. 2021.
+[18] A. Ahmad, J. C. Roh, D. Wang, and A. Dubey, “Vital signs monitoring of         [42] P. Wang et al., “SlpRoF: Improving the temporal coverage and robustness
+     multiple people using a FMCW millimeter-wave sensor,” in Proc. IEEE                 of RF-based vital sign monitoring during sleep,” IEEE Trans. Mobile
+     Radar Conf., 2018, pp. 1450–1455.                                                   Comput., vol. 23, no. 7, pp. 7848–7864, Jul. 2024.
+[19] P. Zheng, C. Zheng, X. Li, H. Chen, A. Wang, and Y. Luo, “Second               [43] D. Zhang et al., “Lt-fall: The design and implementation of a life-
+     harmonic weighted reconstruction for non-contact monitoring heart rate,”            threatening fall detection and alarming system,” Proc. ACM Interactive,
+     IEEE Sensors J., vol. 22, no. 6, pp. 5815–5823, Mar. 2022.                          Mobile, Wearable Ubiquitous Technol., vol. 7, no. 1, pp. 1–24, 2023.
+[20] H. Xu, M. P. Ebrahim, K. Hasan, F. Heydari, P. Howley, and M. R. Yuce,         [44] D. Zhang et al., “Local: An automatic location attribute calibration ap-
+     “Accurate heart rate and respiration rate detection based on a higher-order         proach for large-scale deployment of mmwave-based sensing systems,”
+     harmonics peak selection method using radar non-contact sensors,” Sen-              Proc. ACM Interactive, Mobile, Wearable Ubiquitous Technol., vol. 7,
+     sors, vol. 22, no. 1, 2021, Art. no. 83.                                            no. 4, pp. 1–27, 2024.
+[21] S. Ji, H. Wen, J. Wu, Z. Zhang, and K. Zhao, “Systematic heartbeat             [45] X. Zhang, D. Zhang, Y. Xie, D. Wu, Y. Li, and D. Zhang, “Waffle: A
+     monitoring using a FMCW mm-Wave radar,” in Proc. IEEE Int. Conf.                    waterproof mmwave-based human sensing system inside bathrooms with
+     Consum. Electron. Comput. Eng., 2021, pp. 714–718.                                  running water,” Proc. ACM Interactive, Mobile, Wearable Ubiquitous
+[22] C. Li, V. M. Lubecke, O. Boric-Lubecke, and J. Lin, “A review on recent             Technol., vol. 7, no. 4, pp. 1–29, 2024.
+     advances in doppler radar sensors for noncontact healthcare monitoring,”       [46] J. Guo et al., “Measuring micrometer-level vibrations with mmWave
+     IEEE Trans. Microw. Theory Techn., vol. 61, no. 5, pp. 2046–2060,                   radar,” IEEE Trans. Mobile Comput., vol. 22, no. 4, pp. 2248–2261,
+     May 2013.                                                                           Apr. 2023.
+[23] M. A. Richards, Fundamentals of Radar Signal Processing. New York,             [47] J. Chen, D. Zhang, Z. Wu, F. Zhou, Q. Sun, and Y. Chen, “Contactless
+     NY, USA: McGraw-Hill Education, 2022.                                               electrocardiogram monitoring with millimeter wave radar,” IEEE Trans.
+[24] A. G. Stove, “Linear FMCW radar techniques,” IEE Proc. F Radar Signal               Mobile Comput., vol. 23, no. 1, pp. 270–285, Jan. 2024.
+     Process., vol. 139, no. 5, pp. 343–350, 1992.                                  [48] J. Liu, Y. Zeng, T. Gu, L. Wang, and D. Zhang, “WiPhone: Smartphone-
+[25] C. Jiang, J. Guo, Y. He, M. Jin, S. Li, and Y. Liu, “mmVib: Micrometer-level        based respiration monitoring using ambient reflected WiFi signals,” Proc.
+     vibration measurement with mmWave radar,” in Proc. 26th Annu. Int. Conf.            ACM Interactive, Mobile, Wearable Ubiquitous Technol., vol. 5, no. 1,
+     Mobile Comput. Netw., 2020, pp. 1–13.                                               pp. 1–19, 2021.
+[26] Y. Li et al., “Diversense: Maximizing wi-fi sensing range leveraging signal    [49] F. Zhang, J. Xiong, Z. Chang, J. Ma, and D. Zhang, “Mobi2Sense:
+     diversity,” Proc. ACM Interactive, Mobile, Wearable Ubiquitous Technol.,            Empowering wireless sensing with mobility,” in Proc. 28th Annu. Int.
+     vol. 6, no. 2, pp. 1–28, 2022.                                                      Conf. Mobile Comput. Netw., 2022, pp. 268–281.
+[27] F. Shaffer, R. McCraty, and C. L. Zerr, “A healthy heart is not a metronome:   [50] Z. Chang, F. Zhang, J. Xiong, W. Chen, and D. Zhang, “MSense: Boosting
+     An integrative review of the heart’s anatomy and heart rate variability,”           wireless sensing capability under motion interference,” in Proc. 30th Annu.
+     Front. Psychol., vol. 5, 2014, Art. no. 1040.                                       Int. Conf. Mobile Comput. Netw., 2024, pp. 108–123.
+[28] T.-Y. J. Kao and J. Lin, “Vital sign detection using 60-GHz doppler radar      [51] F. Zhang et al., “Embracing consumer-level UWB-equipped devices for
+     system,” in Proc. IEEE Int. Wirel. Symp., 2013, pp. 1–4.                            fine-grained wireless sensing,” Proc. ACM Interactive, Mobile, Wearable
+[29] S. Dong, Y. Li, J. Lu, Z. Zhang, C. Gu, and J. Mao, “Accurate detection             Ubiquitous Technol., vol. 6, no. 4, pp. 1–27, 2023.
+     of doppler cardiograms with a parameterized respiratory filter technique       [52] Y. Li et al., “Towards domain-independent and real-time gesture recogni-
+     using a k-band radar sensor,” IEEE Trans. Microw. Theory Techn., vol. 71,           tion using mmWave signal,” IEEE Trans. Mobile Comput., vol. 22, no. 12,
+     no. 1, pp. 71–82, Jan. 2023.                                                        pp. 7355–7369, Dec. 2023.
+[30] Y. Xiong, Z. Peng, C. Gu, S. Li, D. Wang, and W. Zhang, “Differential          [53] R. Gao et al., “Towards robust gesture recognition by characterizing the
+     enhancement method for robust and accurate heart rate monitoring via                sensing quality of WiFi signals,” Proc. ACM Interactive, Mobile, Wearable
+     microwave vital sign sensing,” IEEE Trans. Instrum. Meas., vol. 69, no. 9,          Ubiquitous Technol., vol. 6, no. 1, pp. 1–26, 2022.
+     pp. 7108–7118, Sep. 2020.                                                      [54] X. Li et al., “Indotrack: Device-free indoor human tracking with commod-
+[31] W. Liu, S. Cao, and Y. Chen, “Applications of variational mode decom-               ity Wi-Fi,” Proc. ACM Interactive, Mobile, Wearable Ubiquitous Technol.,
+     position in seismic time-frequency analysis,” Geophysics, vol. 81, no. 5,           vol. 1, no. 3, pp. 1–22, 2017.
+     pp. V365–V378, 2016.                                                           [55] W. Li et al., “WiFi-CSI difference paradigm: Achieving efficient doppler
+[32] K. J. Wu and C.-L. Yang, “Heart rate extraction with VMD algorithm in               speed estimation for passive tracking,” Proc. ACM Interactive, Mobile,
+     non-stationary clutter environment based on FMCW radar systems,” in                 Wearable Ubiquitous Technol., vol. 8, no. 2, pp. 1–29, 2024.
+     Proc. IEEE Int. Symp. Radio-Freq. Integration Technol., 2021, pp. 1–3.         [56] S. Chen, W. Yang, Y. Xu, Y. Geng, B. Xin, and L. Huang, “AFall:
+[33] A. Tavakoli, M. Boukhechba, and A. Heydarian, “Leveraging ubiquitous                Wi-Fi-based device-free fall detection system using spatial angle of ar-
+     computing for empathetic routing: A naturalistic data-driven approach,”             rival,” IEEE Trans. Mobile Comput., vol. 22, no. 8, pp. 4471–4484,
+     in Proc. CHI Conf. Hum. Factors Comput. Syst., 2021, pp. 1–6.                       Aug. 2023.
+[34] T. Ahmed, M. M. Rahman, E. Nemati, M. Y. Ahmed, J. Kuang, and A.               [57] X. Wang, T. Liu, C. Feng, D. Fang, and X. Chen, “RF-CM: Cross-modal
+     J. Gao, “Remote breathing rate tracking in stationary position using the            framework for RF-enabled few-shot human activity recognition,” Proc.
+     motion and acoustic sensors of earables,” in Proc. CHI Conf. Hum. Factors           ACM Interactive, Mobile, Wearable Ubiquitous Technol., vol. 7, no. 1,
+     Comput. Syst., 2023, pp. 1–22.                                                      pp. 1–28, 2023.
+
+
+
+      Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on September 11,2025 at 08:23:49 UTC from IEEE Xplore. Restrictions apply.
+14974                                                                               IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 23, NO. 12, DECEMBER 2024
+
+
+
+                          Duo Zhang received the bachelor’s degree in com-                                       Fusang Zhang received the MS and PhD degrees
+                          puter science and technology from the School of                                        in computer science from the Institute of Software,
+                          Computer Science, Northwestern Polytechnical Uni-                                      Chinese Academy of Sciences, Beijing, China, in
+                          versity, Xi’an, China, in 2021. He is currently working                                2013 and 2017, respectively. He is currently an asso-
+                          toward the PhD degree in computer science with the                                     ciate professor with the Institute of Software, Chinese
+                          School of Computer Science, Peking University, Bei-                                    Academy of Sciences. His current research interests
+                          jing, China. His research interests include ubiquitous                                 include mobile and pervasive computing, wireless
+                          computing, mobile computing, and wireless sensing.                                     contactless sensing and quantum sensing.
+
+
+
+
+                                                                                                                 Hongliu Yang received the bachelor’s degree in in-
+                                                                                                                 formation engineering from School of Information
+                          Xusheng Zhang received the bachelor’s degree                                           and Communication Engineering, Beijing University
+                          in computer science and technology from the                                            of Posts and Telecommunications, Beijing, China in
+                          School of Computer Science, Chongqing University,                                      2023. He is currently working toward the PhD degree
+                          Chongqing, China, in 2021. He is currently working                                     with the School of Computer Science, Peking Univer-
+                          toward the PhD degree in computer science with the                                     sity. His current research interests include ubiquitous
+                          School of Computer Science, Peking University, Bei-                                    computing, mobile computing, and wireless sensing.
+                          jing, China. His research interests include ubiquitous
+                          computing, mobile computing, and wireless sensing.
+
+
+
+
+                                                                                                                 Daqing Zhang (Fellow, IEEE) received the PhD
+                                                                                                                 degree from the University of Rome “La Sapienza,”
+                                                                                                                 Roma, Italy, in 1996. He is currently a chair professor
+                                                                                                                 with the Key Laboratory of High Confidence Soft-
+                                                                                                                 ware Technologies (Ministry of Education), School
+                          Yaxiong Xie received the PhD degree from Nanyang
+                                                                                                                 of Computer Science, Peking University, China, and
+                          Technological University in Singapore. He is an as-
+                                                                                                                 Telecom SudParis, IP Paris, France. His research in-
+                          sistant professor with the Department of Computer
+                                                                                                                 terests include context-aware computing, urban com-
+                          Science and Engineering at the University at Buffalo,
+                                                                                                                 puting, mobile computing, Big Data analytics, perva-
+                          SUNY. Before joining UB, he was a postdoctoral
+                                                                                                                 sive elderly care, etc. He has authored more than 300
+                          researcher with Princeton University. His research
+                          broadly focuses on mobile sensing and mobile net-                                      technical papers in leading conferences and journals.
+                                                                                      He was the general or program chair for more than 17 international conferences,
+                          works, with specific emphasis on two areas: apply-
+                                                                                      giving keynote talks at more than 20 international conferences. He is the associate
+                          ing mobile sensing for smart health applications and
+                                                                                      editor for IEEE Pervasive Computing, ACM Transactions on Intelligent Systems
+                          building next-generation mobile networks to support
+                          diverse applications such as video streaming, video         and Technology, and Proceeding of ACM on Interactive, Mobile, Wearable and
+                                                                                      Ubiquitous Technologies. He is the winner of TenYears CoMoRea Impact Paper
+conferencing, and video analytics. His recent research has been published in top
+                                                                                      Award at IEEE PerCom 2013 and TenYears Most Influential Paper Award at
+conferences, including SIGCOMM, MobiCom, NSDI, UbiComp, SenSys, and
+                                                                                      IEEE UIC 2019, Honorable Mention Award at ACM UbiComp 2015 and 2016,
+SigMetrics.
+                                                                                      and Distinguished Paper Award at ACM UbiComp 2021.
+
+
+
+
+    Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on September 11,2025 at 08:23:49 UTC from IEEE Xplore. Restrictions apply.
+
